@@ -3,7 +3,7 @@ import { Listener, type Store } from '@sapphire/framework';
 import { envParseString } from '@skyra/env-utilities';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
 import { ChannelType, EmbedBuilder } from 'discord.js';
-import type { Response } from '../@types/requestResponse';
+import type { OfflineServerResponse, OnlineServerResponse } from '../@types/requestResponse';
 import { isRunningDev } from '../lib/constants';
 
 const channelId = envParseString('CHANNEL_ID');
@@ -26,7 +26,7 @@ export class UserEvent extends Listener {
 		}
 
 		const data = await fetch('https://api.mcsrvstat.us/2/132.145.138.149:25566', { cache: 'no-cache' })
-			.then((res) => res.json() as Promise<Response>)
+			.then((res) => res.json() as Promise<OnlineServerResponse | OfflineServerResponse>)
 			.catch(this.container.logger.error);
 
 		if (!data) {
@@ -34,16 +34,16 @@ export class UserEvent extends Listener {
 		}
 
 		const embed = new EmbedBuilder()
-			.setTitle(`FSMP - ${data.ip}:${data.port}`)
+			.setTitle(`FSMP - ${data.hostname ?? data.ip ?? 'IP não identificado'}:${data.port ?? 'Porta não identificada'}`)
 			.setColor(data.online ? 'Green' : 'Red')
-			.setDescription(data.motd.clean.join(' '))
+			.setDescription(data.online ? data.motd.clean.join(' ') : 'Servidor Offline')
 			.setFields([
 				{
-					name: `Jogadores ${data.players.online}/${data.players.max}`,
-					value: data.players.list.join('\n')
+					name: `Jogadores ${data.online ? data.players.online : 0}/${data.online ? data.players.max : 0}`,
+					value: data.online ? data.players.list?.join('\n') ?? 'Nenhum jogador online' : 'Nenhum jogador online'
 				}
 			])
-			.setFooter({ text: data.version })
+			.setFooter({ text: data.online ? data.version : 'Versão não identificada' })
 			.setTimestamp();
 
 		const message = await channel.messages.fetch({ limit: 1 }).then((collection) => collection.first());

@@ -1,13 +1,23 @@
-export interface Response {
+export interface OnlineServerResponse {
 	ip: string;
 	port: number;
 	debug: Debug;
 	motd: Motd;
 	players: Players;
 	version: string;
-	online: boolean;
-	protocol: number;
-	software: string;
+	online: true;
+	protocol: number | undefined;
+	software: string | undefined;
+	hostname: string | undefined;
+	icon: string | undefined;
+}
+
+interface OfflineServerResponse {
+	online: false;
+	ip: string | undefined;
+	port: number | undefined;
+	debug: Debug;
+	hostname: string | undefined;
 }
 
 interface Debug {
@@ -37,8 +47,8 @@ interface Motd {
 interface Players {
 	online: number;
 	max: number;
-	list: string[];
-	uuid: Uuid;
+	list: string[] | undefined;
+	uuid: Uuid | undefined;
 }
 
 interface Uuid {
