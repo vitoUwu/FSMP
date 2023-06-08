@@ -1,58 +1,36 @@
 export interface OnlineServerResponse {
-	ip: string;
-	port: number;
-	debug: Debug;
-	motd: Motd;
-	players: Players;
-	version: string;
+	status: 'success';
 	online: true;
-	protocol: number | undefined;
-	software: string | undefined;
-	hostname: string | undefined;
-	icon: string | undefined;
+	motd: string;
+	error: null;
+	favicon: string;
+	players: {
+		max: number;
+		now: number;
+		sample: { name: string; id: string }[];
+	};
+	server: {
+		name: string;
+		protocol: number;
+	};
+	last_updated: string;
+	duration: string;
 }
 
 interface OfflineServerResponse {
+	status: string;
 	online: false;
-	ip: string | undefined;
-	port: number | undefined;
-	debug: Debug;
-	hostname: string | undefined;
-}
-
-interface Debug {
-	ping: boolean;
-	query: boolean;
-	srv: boolean;
-	querymismatch: boolean;
-	ipinsrv: boolean;
-	cnameinsrv: boolean;
-	animatedmotd: boolean;
-	cachetime: number;
-	cacheexpire: number;
-	apiversion: number;
-	error: Error;
-}
-
-interface Error {
-	query: string;
-}
-
-interface Motd {
-	raw: string[];
-	clean: string[];
-	html: string[];
-}
-
-interface Players {
-	online: number;
-	max: number;
-	list: string[] | undefined;
-	uuid: Uuid | undefined;
-}
-
-interface Uuid {
-	EtInArcadiaEgo: string;
-	kasinao69: string;
-	Katlinta: string;
+	motd: string;
+	error: string;
+	players: {
+		max: number;
+		min: number;
+		sample: { name: string; id: string }[];
+	};
+	server: {
+		name: null;
+		protocol: number;
+	};
+	last_updated: string;
+	duration: string;
 }

@@ -2,11 +2,12 @@ import { ApplyOptions } from '@sapphire/decorators';
 import { Listener, type Store } from '@sapphire/framework';
 import { envParseString } from '@skyra/env-utilities';
 import { blue, gray, green, magenta, magentaBright, white, yellow } from 'colorette';
-import { ChannelType, EmbedBuilder } from 'discord.js';
+import { AttachmentBuilder, ChannelType, EmbedBuilder } from 'discord.js';
 import type { OfflineServerResponse, OnlineServerResponse } from '../@types/requestResponse';
 import { isRunningDev } from '../lib/constants';
 
 const channelId = envParseString('CHANNEL_ID');
+const ip = envParseString('IP');
 
 @ApplyOptions<Listener.Options>({ once: true })
 export class UserEvent extends Listener {
@@ -16,7 +17,9 @@ export class UserEvent extends Listener {
 		this.printBanner();
 		this.printStoreDebugInformation();
 		await this.updateServerStatus();
-		setInterval(async () => await this.updateServerStatus(), 60_000);
+		setInterval(async () => {
+			await this.updateServerStatus().catch((err) => this.container.logger.error(err));
+		}, 60_000);
 	}
 
 	private async updateServerStatus() {
@@ -25,33 +28,49 @@ export class UserEvent extends Listener {
 			return;
 		}
 
-		const data = await fetch('https://api.mcsrvstat.us/2/132.145.138.149:25566', { cache: 'no-cache' })
+		const data = await fetch(`https://mcapi.us/server/status?ip=${ip}`, { cache: 'no-cache' })
 			.then((res) => res.json() as Promise<OnlineServerResponse | OfflineServerResponse>)
-			.catch(this.container.logger.error);
+			.catch((err) => this.container.logger.error(err));
 
 		if (!data) {
 			return;
 		}
 
+		const arrayBuffer = await fetch(`https://mcapi.us/server/image?ip=${ip}`, { cache: 'no-cache' })
+			.then((res) => res.arrayBuffer())
+			.catch((err) => this.container.logger.error(err));
+
+		const attachment = arrayBuffer ? new AttachmentBuilder(Buffer.from(arrayBuffer), { name: 'image.png' }) : null;
+
 		const embed = new EmbedBuilder()
-			.setTitle(`FSMP - ${data.hostname ?? data.ip ?? 'IP não identificado'}:${data.port ?? 'Porta não identificada'}`)
+			.setTitle(`FSMP - ${ip}`)
+			.setImage('attachment://image.png')
 			.setColor(data.online ? 'Green' : 'Red')
-			.setDescription(data.online ? data.motd.clean.join(' ') : 'Servidor Offline')
+			.setDescription(data.online ? data.motd : 'Servidor Offline')
 			.setFields([
 				{
-					name: `Jogadores ${data.online ? data.players.online : 0}/${data.online ? data.players.max : 0}`,
-					value: data.online ? data.players.list?.join('\n') ?? 'Nenhum jogador online' : 'Nenhum jogador online'
+					name: `Jogadores ${data.online ? data.players.now : 0}/${data.online ? data.players.max : 0}`,
+					value: data.online
+						? data.players.sample.map((player) => player.name).join('\n') ?? 'Nenhum jogador online'
+						: 'Nenhum jogador online'
 				}
 			])
-			.setFooter({ text: data.online ? data.version : 'Versão não identificada' })
+			.setFooter({ text: data.online ? data.server.name : 'Versão não identificada' })
 			.setTimestamp();
 
 		const message = await channel.messages.fetch({ limit: 1 }).then((collection) => collection.first());
+
+		const payload = {
+			embeds: [embed],
+			...(attachment ? { files: [attachment] } : {})
+		};
+
 		if (!message || message.author.id !== this.container.client.user!.id) {
-			await channel.send({ embeds: [embed] });
-		} else {
-			await message.edit({ embeds: [embed] });
+			await channel.send(payload);
+			return;
 		}
+
+		await message.edit(payload);
 	}
 
 	private printBanner() {

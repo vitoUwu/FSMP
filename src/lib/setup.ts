@@ -28,5 +28,6 @@ declare module '@skyra/env-utilities' {
 	interface Env {
 		OWNERS: ArrayString;
 		CHANNEL_ID: string;
+		IP: string;
 	}
 }
